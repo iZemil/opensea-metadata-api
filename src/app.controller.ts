@@ -29,7 +29,7 @@ export class AppController {
       name: 'kid1',
       description:
         'Friendly OpenSea Creature that enjoys long swims in the ocean.',
-      image: path.resolve('./src/images/kid1.png'),
+      image: `https://nft-metadata-api-server.herokuapp.com/${'kid1'}.png`,
       files,
       background_color: 'ff0000',
       // external_url: 'https://openseacreatures.io/%s',
