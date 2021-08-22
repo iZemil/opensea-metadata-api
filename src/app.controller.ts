@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { Controller, Get, Param } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -14,13 +16,28 @@ export class AppController {
   public getCreature(@Param('tokenId') tokenId: string) {
     console.log(tokenId);
 
+    // const img = require('./images/kid1.png');
+    const imagesPath = path.resolve('./src/images');
+    // fs.readdir(path.resolve('./src/images'), (err, files) => {
+    //   console.log(err, files);
+    // });
+
+    // TODO: connect generator
+    // TODO: защита от дубликации может быть локально в нейминге
     return {
-      name: 'some name',
+      name: 'kid1',
       description:
         'Friendly OpenSea Creature that enjoys long swims in the ocean.',
-      image: 'image_url',
-      external_url: 'https://openseacreatures.io/%s',
-      attributes: [],
+      image: path.resolve('./src/images/kid1.png'),
+      background_color: 'ff0000',
+      // external_url: 'https://openseacreatures.io/%s',
+      attributes: [
+        {
+          display_type: 'date',
+          trait_type: 'birthday',
+          value: 1546360800,
+        },
+      ],
     };
   }
 
