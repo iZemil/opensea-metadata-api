@@ -27,8 +27,7 @@ export class AppController {
     // TODO: защита от дубликации может быть локально в нейминге
     return {
       name: 'kid1',
-      description:
-        'Friendly OpenSea Creature that enjoys long swims in the ocean.',
+      description: '',
       image: `https://nft-metadata-api-server.herokuapp.com/${'kid1'}.png`,
       files,
       background_color: 'ff0000',
