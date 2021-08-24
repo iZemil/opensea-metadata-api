@@ -1,6 +1,6 @@
 import * as images from 'images';
 import * as path from 'path';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdirSync } from 'fs';
 import {
   createCanvas,
   loadImage,
@@ -11,15 +11,15 @@ import {
 import * as tiledMap from './assets/map.json';
 
 export class Generator {
+  private readonly output = path.resolve('./src/assets/outputs');
   private readonly tileSize = 8;
-  public size = 256;
-  public canvas: Canvas;
-  public tiledMap = tiledMap;
-  public tiles: Record<string, Canvas> = {};
+  private readonly size = 256;
 
-  get context(): NodeCanvasRenderingContext2D {
-    return this.canvas.getContext('2d');
-  }
+  public readonly canvas: Canvas;
+  public readonly context: NodeCanvasRenderingContext2D;
+  public readonly tiledMap = tiledMap;
+
+  public tiles: Record<string, Canvas> = {};
 
   get rowCount(): number {
     return this.tiledMap.width;
@@ -28,13 +28,14 @@ export class Generator {
   constructor() {
     console.log('_ _ _ _Generator_ _ _ _');
     this.canvas = createCanvas(this.size, this.size);
-    this.init();
+    this.context = this.canvas.getContext('2d');
+    // this.init();
   }
 
   public async init(): Promise<void> {
     await this.initTiles();
-    this.generateLayers();
-    // this.generateFace();
+    await this.initDirs();
+    await this.initLayers();
   }
 
   private async initTiles(): Promise<void> {
@@ -69,52 +70,68 @@ export class Generator {
         count += 1;
       });
     });
-
-    console.log(
-      `tiles ${cols}x${rows} with ${count} count`,
-      Object.keys(this.tiles).reverse(),
-    );
   }
 
-  private async generateLayers(): Promise<void> {
+  private async initDirs(): Promise<Generator> {
+    await fs.rmdir(this.output, { recursive: true });
+
+    mkdirSync(this.output);
+
+    this.tiledMap.layers.forEach((group) => {
+      if (group.type === 'group') {
+        const dirName = group.name;
+        mkdirSync(path.resolve(`${this.output}/${dirName}`));
+
+        console.log(`+ Dir: ${dirName}`);
+      }
+    });
+
+    return this;
+  }
+
+  private async initLayers(): Promise<void> {
     // fill canvas with bg
     // this.context.fillStyle = '#fff';
     // this.context.fillRect(0, 0, this.size, this.size);
 
-    // TODO: составить все слои из карты и сохранить
-    tiledMap.layers.forEach((group) => {
-      group.layers.forEach(async (layer) => {
-        const groupDir = group.name;
+    for await (const group of this.tiledMap.layers) {
+      const groupDir = group.name;
 
-        // await fs.rmdir(path.resolve(`./src/assets/outputs/${groupDir}`), { recursive: true })
+      if (group.type === 'group') {
+        for await (const layer of group.layers) {
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        let rowIndex = 0;
-        layer.data.forEach((tileIndex: number, index: number): void => {
-          const isEmpty = tileIndex === 0;
+          let rowIndex = 0;
+          let index = 0;
+          for await (const tileIndex of layer.data) {
+            const isEmpty = tileIndex === 0;
 
-          // render
-          if (!isEmpty) {
-            const x = ((index % this.rowCount) - 1) * this.tileSize;
-            const y = (rowIndex - 1) * this.tileSize;
-            const tile = this.tiles[String(tileIndex - 1)];
+            // render
+            if (!isEmpty) {
+              const x = ((index % this.rowCount) - 1) * this.tileSize;
+              const y = (rowIndex - 1) * this.tileSize;
+              const tile = this.tiles[String(tileIndex - 1)];
 
-            this.context.drawImage(tile, x, y, this.tileSize, this.tileSize);
+              this.context.drawImage(tile, x, y, this.tileSize, this.tileSize);
+            }
+
+            if (index % this.rowCount === 0) {
+              rowIndex += 1;
+            }
+
+            index += 1;
           }
 
-          if (index % this.rowCount === 0) {
-            rowIndex += 1;
-          }
-        });
-
-        const canvasBuffer = this.canvas.toBuffer('image/png');
-        await this.saveImg(`${groupDir}/${layer.name}`, canvasBuffer);
-      });
-    });
+          const canvasBuffer = this.canvas.toBuffer('image/png');
+          await this.saveImg(`${groupDir}/${layer.name}`, canvasBuffer);
+        }
+      }
+    }
   }
 
   private async saveImg(name: string, buffer: Buffer): Promise<void> {
     try {
-      await fs.writeFile(this.output(name), buffer);
+      await fs.writeFile(this.outputImg(name), buffer);
       console.log(`Image: ${name} succes`);
     } catch (error) {
       console.log(`Image: ${name} error:`, error);
@@ -126,15 +143,15 @@ export class Generator {
       .draw(this.image('Eyes', 'Eyes4#Multi'), 0, 0)
       .draw(this.image('Noses', 'Nose0'), 0, 0)
       .draw(this.image('Mouths', 'Mouth0'), 0, 0)
-      .save(this.output('1'));
+      .save(this.outputImg('1'));
   }
 
   private asset(group: string, name: string): string {
     return path.resolve(`./src/assets/${group}/${name}.png`);
   }
 
-  private output(imgName: string): string {
-    return path.resolve(`./src/assets/outputs/${imgName}.png`);
+  private outputImg(imgName: string): string {
+    return path.resolve(`${this.output}/${imgName}.png`);
   }
 
   private image(group: string, name: string): images.Image {
