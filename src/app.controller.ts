@@ -17,7 +17,7 @@ export class AppController {
     console.log(tokenId);
 
     // const img = require('./images/kid1.png');
-    const imagesPath = path.resolve('./src/images');
+    const imagesPath = path.resolve('./src/generator/kids');
     // fs.readdir(path.resolve('./src/images'), (err, files) => {
     //   console.log(err, files);
     // });

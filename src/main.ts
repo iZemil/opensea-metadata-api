@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Generator } from './Generator';
+import { Generator } from './generator/Generator';
 
 async function bootstrap() {
   const PORT = process.env.PORT || 3000;

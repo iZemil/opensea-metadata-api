@@ -1,6 +1,5 @@
-import * as images from 'images';
 import * as path from 'path';
-import { promises as fs, mkdirSync } from 'fs';
+import { promises as fs, mkdirSync, readdirSync, rmdirSync } from 'fs';
 import {
   createCanvas,
   loadImage,
@@ -9,11 +8,11 @@ import {
 } from 'canvas';
 
 import * as tiledMap from './assets/map.json';
+import { TKidLayers, Kid } from './Kid';
+import { LAYER_GROUPS, TLayerGroup, TLayerMap } from './assets/constants';
 
 export class Generator {
-  private readonly output = path.resolve('./src/assets/outputs');
-  private readonly tileSize = 8;
-  private readonly size = 256;
+  private readonly output = path.resolve('./src/generator/assets/outputs');
 
   public readonly canvas: Canvas;
   public readonly context: NodeCanvasRenderingContext2D;
@@ -21,15 +20,28 @@ export class Generator {
 
   public tiles: Record<string, Canvas> = {};
 
+  public layersMap: TLayerMap;
+  public kids: Record<string, Kid> = {};
+
+  get tileSize(): number {
+    return this.tiledMap.tilewidth;
+  }
+
   get rowCount(): number {
     return this.tiledMap.width;
+  }
+
+  get size(): number {
+    return this.tileSize * this.rowCount;
   }
 
   constructor() {
     console.log('_ _ _ _Generator_ _ _ _');
     this.canvas = createCanvas(this.size, this.size);
     this.context = this.canvas.getContext('2d');
+
     // this.init();
+    this.composeKids();
   }
 
   public async init(): Promise<void> {
@@ -138,23 +150,76 @@ export class Generator {
     }
   }
 
-  private generateFace(): void {
-    this.image('Faces', 'Face2#Multi')
-      .draw(this.image('Eyes', 'Eyes4#Multi'), 0, 0)
-      .draw(this.image('Noses', 'Nose0'), 0, 0)
-      .draw(this.image('Mouths', 'Mouth0'), 0, 0)
-      .save(this.outputImg('1'));
-  }
-
-  private asset(group: string, name: string): string {
-    return path.resolve(`./src/assets/${group}/${name}.png`);
-  }
-
   private outputImg(imgName: string): string {
     return path.resolve(`${this.output}/${imgName}.png`);
   }
 
-  private image(group: string, name: string): images.Image {
-    return images(this.asset(group, name));
+  private formLayersMap(): TLayerMap {
+    const layersMap = Object.fromEntries(
+      LAYER_GROUPS.map((groupkey) => [groupkey, []]),
+    ) as TLayerMap;
+
+    readdirSync(this.output).forEach((dir) => {
+      readdirSync(`${this.output}/${dir}/`).forEach((img) => {
+        layersMap[dir].push(img);
+      });
+    });
+
+    return layersMap;
+  }
+
+  private composeKids(): void {
+    this.layersMap = this.formLayersMap();
+
+    console.time('[composeKids]');
+    let count = 0;
+    this.composeKid(0, Kid.initials(), (accumulatedLayers) => {
+      const isExcluded = false;
+      if (!isExcluded) {
+        const kid = new Kid({
+          layers: accumulatedLayers,
+          index: count,
+        });
+        this.kids[`kid#${count}` || kid.key] = kid;
+
+        count += 1;
+      }
+    });
+    console.timeEnd('[composeKids]');
+
+    // Try pngs
+    console.time('[saveKids]');
+    // const kidsDirPath = path.resolve('./src/kids');
+    // rmdirSync(kidsDirPath, { recursive: true });
+    // mkdirSync(kidsDirPath);
+    // Object.entries(this.kids)
+    //   .slice(0, 500)
+    //   .forEach(([kidName, kid]) => {
+    //     kid.save(kidName);
+    //   });
+    console.timeEnd('[saveKids]');
+  }
+
+  private composeKid(
+    groupIndex: number,
+    layers: TKidLayers,
+    onFinish: (accumulatedLayers: TKidLayers) => void,
+  ): void {
+    const isLastParam = groupIndex === LAYER_GROUPS.length;
+
+    if (isLastParam) {
+      onFinish(layers);
+    } else {
+      const layerGroupName = LAYER_GROUPS[groupIndex];
+      const groupLayers = this.layersMap[layerGroupName];
+
+      Object.values(groupLayers).forEach((layerName) => {
+        this.composeKid(
+          groupIndex + 1,
+          { ...layers, [layerGroupName]: layerName },
+          onFinish,
+        );
+      });
+    }
   }
 }
