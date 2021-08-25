@@ -180,7 +180,7 @@ export class Generator {
           layers: accumulatedLayers,
           index: count,
         });
-        this.kids[`kid#${count}` || kid.key] = kid;
+        this.kids[kid.key] = kid;
 
         count += 1;
       }
@@ -198,6 +198,26 @@ export class Generator {
     //     kid.save(kidName);
     //   });
     console.timeEnd('[saveKids]');
+
+    // this.saveKidsToJson();
+  }
+
+  private async saveKidsToJson(): Promise<void> {
+    try {
+      const data = Object.fromEntries(
+        Object.entries(this.kids).map(([kidKey, kid]) => [
+          kid.options.index,
+          kidKey,
+        ]),
+      );
+      const kidsJson = JSON.stringify(data);
+      await fs.writeFile(
+        path.resolve('./src/generator/kids/kids.json'),
+        kidsJson,
+      );
+    } catch (error) {
+      console.log('[saveKidsToJson] error', error);
+    }
   }
 
   private composeKid(
@@ -216,7 +236,7 @@ export class Generator {
       Object.values(groupLayers).forEach((layerName) => {
         this.composeKid(
           groupIndex + 1,
-          { ...layers, [layerGroupName]: layerName },
+          { ...layers, [layerGroupName]: layerName.replace('.png', '') },
           onFinish,
         );
       });

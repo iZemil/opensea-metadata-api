@@ -15,16 +15,12 @@ export class Kid {
 
   constructor(options: IKidOptions) {
     this.options = options;
-    // this.key = Kid.createKey(
-    //   ...options.layers,
-    // );
-
-    // this.renderLayers();
+    this.key = Kid.createKey(options.layers);
   }
 
   private image(group: string, name: string): images.Image {
     const outputPath = path.resolve(
-      `./src/generator/assets/outputs/${group}/${name}`,
+      `./src/generator/assets/outputs/${group}/${name}.png`,
     );
 
     return images(outputPath);
@@ -49,44 +45,17 @@ export class Kid {
     }
   }
 
-  //   private renderLayers(): Kid {
-  //     const map = this.scene.make.tilemap({
-  //       key: 'map',
-  //     });
-  //     const tileset = map.addTilesetImage('tiles', 'tiles');
-  //     const { x, y } = this.offsets;
+  public static create(kidKey: string): void {
+    // TODO: parse kidKey and save
+  }
 
-  //     this.options.layers.forEach((layer) => {
-  //       const tiledLayer = map.createLayer(layer.tiled.name, [tileset], x, y);
-  //       const group = layer.options.group;
+  public static createKey(layers: TKidLayers): string {
+    const keys = Object.entries(layers).map(
+      ([groupName, layerName]) => `${groupName}:${layerName}`,
+    );
 
-  //       // Замена цвета глаз
-  //       if (group === 'Eyes') {
-  //         tiledLayer.forEachTile((tile) => {
-  //           if (tile.properties.type === TILE_PROPS.type.eyes) {
-  //             tiledLayer.replaceByIndex(tile.index, layer.options.tileIndex + 1);
-  //           }
-  //         });
-  //       }
-
-  //       // Замена цвета кожи
-  //       if (group === 'Faces') {
-  //         tiledLayer.forEachTile((tile) => {
-  //           if (tile.properties.type === TILE_PROPS.type.skin) {
-  //             tiledLayer.replaceByIndex(tile.index, layer.options.tileIndex + 1);
-  //           }
-  //         });
-  //       }
-
-  //       tiledLayer.setScale(this.scale);
-  //     });
-
-  //     return this;
-  //   }
-
-  public static createKey(...keys: string[]): string {
     return keys.reduce(
-      (acc, curr, keyIndex) => `${acc}${keyIndex ? '__' : ''}${curr}`,
+      (acc, curr, keyIndex) => `${acc}${keyIndex ? ';' : ''}${curr}`,
       '',
     );
   }
